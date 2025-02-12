@@ -13,21 +13,48 @@ import { useQuery } from "@tanstack/react-query";
 import { Problem } from "@shared/schema";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Plus } from "lucide-react";
+import { Plus, Menu } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function HomePage() {
   const { user, logoutMutation } = useAuth();
   const [selectedProblem, setSelectedProblem] = useState<Problem | null>(null);
+  const isMobile = useIsMobile();
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   const { data: problems = [] } = useQuery<Problem[]>({
     queryKey: ["/api/problems"],
   });
 
+  const MobileNavigation = () => (
+    <Sheet open={showMobileMenu} onOpenChange={setShowMobileMenu}>
+      <SheetContent side="left" className="w-[85%] sm:w-[400px] p-0">
+        <div className="h-full flex flex-col">
+          <ProblemList
+            problems={problems}
+            selectedProblem={selectedProblem}
+            onSelectProblem={(problem) => {
+              setSelectedProblem(problem);
+              setShowMobileMenu(false);
+            }}
+          />
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+
   return (
     <div className="h-screen flex flex-col">
       <header className="border-b p-4 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Circuit Master</h1>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          {isMobile && (
+            <Button variant="ghost" size="icon" onClick={() => setShowMobileMenu(true)}>
+              <Menu className="h-5 w-5" />
+            </Button>
+          )}
+          <h1 className="text-xl sm:text-2xl font-bold">Circuit Master</h1>
+        </div>
+        <div className="flex items-center gap-2 sm:gap-4">
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="outline" size="icon">
@@ -43,7 +70,7 @@ export default function HomePage() {
               </div>
             </SheetContent>
           </Sheet>
-          <span className="text-sm text-muted-foreground">
+          <span className="hidden sm:inline text-sm text-muted-foreground">
             {user?.username} - {user?.points} points
           </span>
           <Button
@@ -56,33 +83,48 @@ export default function HomePage() {
         </div>
       </header>
 
-      <ResizablePanelGroup direction="horizontal" className="flex-1">
-        <ResizablePanel defaultSize={25} minSize={20}>
-          <ProblemList
-            problems={problems}
-            selectedProblem={selectedProblem}
-            onSelectProblem={setSelectedProblem}
-          />
-        </ResizablePanel>
+      {isMobile ? (
+        <>
+          <MobileNavigation />
+          <div className="flex-1 flex flex-col">
+            {selectedProblem ? (
+              <CircuitCanvas problem={selectedProblem} />
+            ) : (
+              <div className="h-full flex items-center justify-center text-muted-foreground p-4 text-center">
+                Select a problem from the menu to begin
+              </div>
+            )}
+          </div>
+        </>
+      ) : (
+        <ResizablePanelGroup direction="horizontal" className="flex-1">
+          <ResizablePanel defaultSize={25} minSize={20}>
+            <ProblemList
+              problems={problems}
+              selectedProblem={selectedProblem}
+              onSelectProblem={setSelectedProblem}
+            />
+          </ResizablePanel>
 
-        <ResizableHandle />
+          <ResizableHandle />
 
-        <ResizablePanel defaultSize={50}>
-          {selectedProblem ? (
-            <CircuitCanvas problem={selectedProblem} />
-          ) : (
-            <div className="h-full flex items-center justify-center text-muted-foreground">
-              Select a problem to begin
-            </div>
-          )}
-        </ResizablePanel>
+          <ResizablePanel defaultSize={50}>
+            {selectedProblem ? (
+              <CircuitCanvas problem={selectedProblem} />
+            ) : (
+              <div className="h-full flex items-center justify-center text-muted-foreground">
+                Select a problem to begin
+              </div>
+            )}
+          </ResizablePanel>
 
-        <ResizableHandle />
+          <ResizableHandle />
 
-        <ResizablePanel defaultSize={25}>
-          <Leaderboard />
-        </ResizablePanel>
-      </ResizablePanelGroup>
+          <ResizablePanel defaultSize={25}>
+            <Leaderboard />
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      )}
     </div>
   );
 }

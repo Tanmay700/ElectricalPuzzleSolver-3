@@ -9,10 +9,12 @@ import { Input } from "@/components/ui/input";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export function CircuitCanvas({ problem }: { problem: Problem }) {
   const { toast } = useToast();
   const [answer, setAnswer] = useState("");
+  const isMobile = useIsMobile();
   const circuitData = problem.circuitData as CircuitData;
 
   // Transform circuit data into ReactFlow format
@@ -21,9 +23,9 @@ export function CircuitCanvas({ problem }: { problem: Problem }) {
       id: node.id,
       type: 'default',
       data: { label: `${node.type} (${node.value})` },
-      position: { x: Math.random() * 500, y: Math.random() * 300 } // Random positions for now
+      position: { x: Math.random() * (isMobile ? 300 : 500), y: Math.random() * (isMobile ? 200 : 300) }
     })),
-    [circuitData.nodes]
+    [circuitData.nodes, isMobile]
   );
 
   const edges: Edge[] = useMemo(() => 
@@ -65,12 +67,12 @@ export function CircuitCanvas({ problem }: { problem: Problem }) {
 
   return (
     <div className="h-full flex flex-col">
-      <Card className="m-4">
+      <Card className="m-2 sm:m-4">
         <CardHeader>
-          <CardTitle>{problem.title}</CardTitle>
+          <CardTitle className="text-lg sm:text-xl">{problem.title}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground mb-4">{problem.description}</p>
+          <p className="text-sm sm:text-base text-muted-foreground mb-4">{problem.description}</p>
 
           {/* Circuit Image */}
           {problem.imageUrl && (
@@ -84,7 +86,7 @@ export function CircuitCanvas({ problem }: { problem: Problem }) {
           )}
 
           {/* Interactive Circuit */}
-          <div className="h-[400px] border rounded-md">
+          <div className="h-[300px] sm:h-[400px] border rounded-md">
             <ReactFlow
               nodes={nodes}
               edges={edges}
@@ -95,16 +97,18 @@ export function CircuitCanvas({ problem }: { problem: Problem }) {
             </ReactFlow>
           </div>
         </CardContent>
-        <CardFooter className="flex gap-2">
+        <CardFooter className="flex flex-col sm:flex-row gap-2">
           <Input
             type="number"
             placeholder="Enter your answer"
             value={answer}
             onChange={(e) => setAnswer(e.target.value)}
+            className="w-full sm:w-auto"
           />
           <Button
             onClick={() => submitMutation.mutate(Number(answer))}
             disabled={submitMutation.isPending}
+            className="w-full sm:w-auto"
           >
             Submit
           </Button>

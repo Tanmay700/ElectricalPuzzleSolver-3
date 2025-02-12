@@ -31,7 +31,8 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
-      <div className="flex items-center justify-center p-8">
+      {/* Form Section - Full width on mobile, half width on desktop */}
+      <div className="flex items-center justify-center p-4 sm:p-8">
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle className="text-2xl font-bold text-center">
@@ -39,7 +40,7 @@ export default function AuthPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="login">
+            <Tabs defaultValue="login" className="w-full">
               <TabsList className="grid grid-cols-2 w-full">
                 <TabsTrigger value="login">Login</TabsTrigger>
                 <TabsTrigger value="register">Register</TabsTrigger>
@@ -99,12 +100,13 @@ export default function AuthPage() {
         </Card>
       </div>
 
+      {/* Hero Section - Hidden on mobile, visible on desktop */}
       <div className="hidden lg:flex flex-col items-center justify-center bg-primary/5 p-8">
-        <Zap className="w-24 h-24 text-primary mb-8" />
-        <h1 className="text-4xl font-bold text-center mb-4">
+        <Zap className="w-16 h-16 sm:w-24 sm:h-24 text-primary mb-6 sm:mb-8" />
+        <h1 className="text-3xl sm:text-4xl font-bold text-center mb-4">
           Master Electrical Networks
         </h1>
-        <p className="text-xl text-center text-muted-foreground max-w-md">
+        <p className="text-lg sm:text-xl text-center text-muted-foreground max-w-md">
           Learn and practice circuit analysis through interactive problems and compete with others
         </p>
       </div>

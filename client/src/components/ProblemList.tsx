@@ -37,7 +37,7 @@ export function ProblemList({ problems, selectedProblem, onSelectProblem }: Prob
                 )}
               >
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-medium">{problem.title}</h3>
+                  <h3 className="font-medium line-clamp-1">{problem.title}</h3>
                   <Badge variant="outline" className={difficultyColors[problem.difficulty]}>
                     {problem.difficulty}
                   </Badge>
