@@ -1,4 +1,4 @@
 
 export const API_URL = import.meta.env.MODE === 'production' 
-  ? 'https://your-railway-backend-url.com' 
+  ? 'electricalpuzzlesolver-3-production.up.railway.app' 
   : 'http://localhost:5000';
