@@ -45,7 +45,7 @@ export function CircuitCanvas({ problem }: { problem: Problem }) {
       });
       return res.json();
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       if (data.correct) {
         toast({
           title: "Correct!",
@@ -53,9 +53,11 @@ export function CircuitCanvas({ problem }: { problem: Problem }) {
         });
         if (data.user) {
           queryClient.setQueryData(["/api/user"], data.user);
-          queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+          await Promise.all([
+            queryClient.invalidateQueries({ queryKey: ["/api/user"] }),
+            queryClient.invalidateQueries({ queryKey: ["/api/leaderboard"] })
+          ]);
         }
-        queryClient.invalidateQueries({ queryKey: ["/api/leaderboard"] });
       } else {
         toast({
           title: "Incorrect",
