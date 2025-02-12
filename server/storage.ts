@@ -54,7 +54,7 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db
       .update(users)
       .set({
-        points: points,
+        points: db.raw('points + ?', [points]),
         solvedCount: db.raw('solved_count + 1')
       })
       .where(eq(users.id, userId))
