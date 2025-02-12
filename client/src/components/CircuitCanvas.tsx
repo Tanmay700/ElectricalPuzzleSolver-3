@@ -1,4 +1,4 @@
-import { Problem } from "@shared/schema";
+import { Problem, CircuitData } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import ReactFlow, { Controls, Background } from 'reactflow';
 import 'reactflow/dist/style.css';
@@ -13,8 +13,9 @@ import { useToast } from "@/hooks/use-toast";
 export function CircuitCanvas({ problem }: { problem: Problem }) {
   const { toast } = useToast();
   const [answer, setAnswer] = useState("");
-  const nodes = problem.circuitData.nodes;
-  const edges = problem.circuitData.edges;
+  const circuitData = problem.circuitData as CircuitData;
+  const nodes = circuitData.nodes;
+  const edges = circuitData.edges;
 
   const submitMutation = useMutation({
     mutationFn: async (solution: number) => {

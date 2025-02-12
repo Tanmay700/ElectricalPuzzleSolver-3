@@ -2,9 +2,17 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
+import { problems } from "@shared/schema";
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
+
+  // Create new problem
+  app.post("/api/problems", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const problem = await storage.createProblem(req.body);
+    res.status(201).json(problem);
+  });
 
   // Get all problems
   app.get("/api/problems", async (_req, res) => {
@@ -22,16 +30,16 @@ export function registerRoutes(app: Express): Server {
   // Submit solution
   app.post("/api/problems/:id/submit", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    
+
     const problemId = Number(req.params.id);
     const problem = await storage.getProblem(problemId);
     if (!problem) return res.status(404).send("Problem not found");
 
     const solution = req.body.solution;
     const isCorrect = Math.abs(solution - problem.solution.timeConstant) < 0.001;
-    
+
     await storage.saveUserSolution(req.user!.id, problemId, isCorrect);
-    
+
     if (isCorrect) {
       const existingSolution = await storage.getUserSolution(req.user!.id, problemId);
       if (!existingSolution?.solved) {
@@ -39,7 +47,7 @@ export function registerRoutes(app: Express): Server {
         return res.json({ correct: true, user: updatedUser });
       }
     }
-    
+
     res.json({ correct: isCorrect });
   });
 

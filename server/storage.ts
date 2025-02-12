@@ -15,6 +15,7 @@ export interface IStorage {
 
   getProblems(): Promise<Problem[]>;
   getProblem(id: number): Promise<Problem | undefined>;
+  createProblem(problem: Omit<Problem, "id">): Promise<Problem>;
 
   getUserSolution(userId: number, problemId: number): Promise<UserSolution | undefined>;
   saveUserSolution(userId: number, problemId: number, solved: boolean): Promise<UserSolution>;
@@ -67,6 +68,11 @@ export class DatabaseStorage implements IStorage {
 
   async getProblem(id: number): Promise<Problem | undefined> {
     const [problem] = await db.select().from(problems).where(eq(problems.id, id));
+    return problem;
+  }
+
+  async createProblem(insertProblem: Omit<Problem, "id">): Promise<Problem> {
+    const [problem] = await db.insert(problems).values(insertProblem).returning();
     return problem;
   }
 

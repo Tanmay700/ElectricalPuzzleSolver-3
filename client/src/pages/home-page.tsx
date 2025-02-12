@@ -2,6 +2,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { CircuitCanvas } from "@/components/CircuitCanvas";
 import { ProblemList } from "@/components/ProblemList";
 import { Leaderboard } from "@/components/Leaderboard";
+import { ProblemForm } from "@/components/ProblemForm";
 import { Button } from "@/components/ui/button";
 import {
   ResizableHandle,
@@ -11,6 +12,8 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { Problem } from "@shared/schema";
 import { useState } from "react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Plus } from "lucide-react";
 
 export default function HomePage() {
   const { user, logoutMutation } = useAuth();
@@ -25,6 +28,21 @@ export default function HomePage() {
       <header className="border-b p-4 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Circuit Master</h1>
         <div className="flex items-center gap-4">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="icon">
+                <Plus className="h-4 w-4" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent>
+              <SheetHeader>
+                <SheetTitle>Create New Problem</SheetTitle>
+              </SheetHeader>
+              <div className="mt-4">
+                <ProblemForm />
+              </div>
+            </SheetContent>
+          </Sheet>
           <span className="text-sm text-muted-foreground">
             {user?.username} - {user?.points} points
           </span>
@@ -46,9 +64,9 @@ export default function HomePage() {
             onSelectProblem={setSelectedProblem}
           />
         </ResizablePanel>
-        
+
         <ResizableHandle />
-        
+
         <ResizablePanel defaultSize={50}>
           {selectedProblem ? (
             <CircuitCanvas problem={selectedProblem} />
@@ -58,9 +76,9 @@ export default function HomePage() {
             </div>
           )}
         </ResizablePanel>
-        
+
         <ResizableHandle />
-        
+
         <ResizablePanel defaultSize={25}>
           <Leaderboard />
         </ResizablePanel>

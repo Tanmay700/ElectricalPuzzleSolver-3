@@ -10,6 +10,23 @@ export const users = pgTable("users", {
   solvedCount: integer("solved_count").notNull().default(0)
 });
 
+// Define the circuit data schema
+export const circuitNodeSchema = z.object({
+  id: z.string(),
+  type: z.string(),
+  value: z.string()
+});
+
+export const circuitEdgeSchema = z.object({
+  source: z.string(),
+  target: z.string()
+});
+
+export const circuitDataSchema = z.object({
+  nodes: z.array(circuitNodeSchema),
+  edges: z.array(circuitEdgeSchema)
+});
+
 export const problems = pgTable("problems", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
@@ -37,3 +54,4 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type Problem = typeof problems.$inferSelect;
 export type UserSolution = typeof userSolutions.$inferSelect;
+export type CircuitData = z.infer<typeof circuitDataSchema>;
