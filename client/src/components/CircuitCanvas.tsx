@@ -53,6 +53,7 @@ export function CircuitCanvas({ problem }: { problem: Problem }) {
         });
         if (data.user) {
           queryClient.setQueryData(["/api/user"], data.user);
+          queryClient.invalidateQueries({ queryKey: ["/api/user"] });
         }
         queryClient.invalidateQueries({ queryKey: ["/api/leaderboard"] });
       } else {
