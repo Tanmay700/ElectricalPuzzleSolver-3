@@ -1,135 +1,117 @@
-import { User, InsertUser, Problem, UserSolution } from "@shared/schema";
-import createMemoryStore from "memorystore";
+import { User, InsertUser, Problem, UserSolution, users, problems, userSolutions } from "@shared/schema";
+import { eq } from "drizzle-orm";
+import { db } from "./db";
 import session from "express-session";
+import connectPg from "connect-pg-simple";
+import { pool } from "./db";
 
-const MemoryStore = createMemoryStore(session);
+const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUserPoints(userId: number, points: number): Promise<User>;
-  
+
   getProblems(): Promise<Problem[]>;
   getProblem(id: number): Promise<Problem | undefined>;
-  
+
   getUserSolution(userId: number, problemId: number): Promise<UserSolution | undefined>;
   saveUserSolution(userId: number, problemId: number, solved: boolean): Promise<UserSolution>;
-  
+
   getLeaderboard(): Promise<User[]>;
-  
-  sessionStore: session.SessionStore;
+
+  sessionStore: session.Store;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private problems: Map<number, Problem>;
-  private userSolutions: Map<string, UserSolution>;
-  sessionStore: session.SessionStore;
-  currentId: number;
+export class DatabaseStorage implements IStorage {
+  sessionStore: session.Store;
 
   constructor() {
-    this.users = new Map();
-    this.problems = new Map();
-    this.userSolutions = new Map();
-    this.currentId = 1;
-    this.sessionStore = new MemoryStore({
-      checkPeriod: 86400000
+    this.sessionStore = new PostgresSessionStore({
+      pool,
+      createTableIfMissing: true,
     });
-
-    // Initialize with some sample problems
-    this.initializeProblems();
-  }
-
-  private initializeProblems() {
-    const sampleProblems: Problem[] = [
-      {
-        id: 1,
-        title: "Simple RC Circuit",
-        description: "Calculate the time constant of this RC circuit",
-        difficulty: "Easy",
-        points: 10,
-        circuitData: {
-          nodes: [
-            { id: '1', type: 'resistor', value: '1k' },
-            { id: '2', type: 'capacitor', value: '1uF' }
-          ],
-          edges: [
-            { source: '1', target: '2' }
-          ]
-        },
-        solution: { timeConstant: 0.001 }
-      },
-      // Add more sample problems here
-    ];
-
-    sampleProblems.forEach(p => this.problems.set(p.id, p));
   }
 
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentId++;
-    const user: User = { ...insertUser, id, points: 0, solvedCount: 0 };
-    this.users.set(id, user);
+    const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
 
   async updateUserPoints(userId: number, points: number): Promise<User> {
-    const user = await this.getUser(userId);
-    if (!user) throw new Error("User not found");
-    
-    const updatedUser = {
-      ...user,
-      points: user.points + points,
-      solvedCount: user.solvedCount + 1
-    };
-    this.users.set(userId, updatedUser);
-    return updatedUser;
+    const [user] = await db
+      .update(users)
+      .set({
+        points: points,
+        solvedCount: db.raw('solved_count + 1')
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
   }
 
   async getProblems(): Promise<Problem[]> {
-    return Array.from(this.problems.values());
+    return await db.select().from(problems);
   }
 
   async getProblem(id: number): Promise<Problem | undefined> {
-    return this.problems.get(id);
+    const [problem] = await db.select().from(problems).where(eq(problems.id, id));
+    return problem;
   }
 
   async getUserSolution(userId: number, problemId: number): Promise<UserSolution | undefined> {
-    const key = `${userId}-${problemId}`;
-    return this.userSolutions.get(key);
-  }
-
-  async saveUserSolution(userId: number, problemId: number, solved: boolean): Promise<UserSolution> {
-    const key = `${userId}-${problemId}`;
-    const existing = this.userSolutions.get(key);
-    
-    const solution: UserSolution = {
-      id: existing?.id || this.currentId++,
-      userId,
-      problemId,
-      solved,
-      attempts: (existing?.attempts || 0) + 1
-    };
-    
-    this.userSolutions.set(key, solution);
+    const [solution] = await db
+      .select()
+      .from(userSolutions)
+      .where(eq(userSolutions.userId, userId))
+      .where(eq(userSolutions.problemId, problemId));
     return solution;
   }
 
+  async saveUserSolution(userId: number, problemId: number, solved: boolean): Promise<UserSolution> {
+    const existing = await this.getUserSolution(userId, problemId);
+    if (existing) {
+      const [solution] = await db
+        .update(userSolutions)
+        .set({
+          solved,
+          attempts: existing.attempts + 1
+        })
+        .where(eq(userSolutions.id, existing.id))
+        .returning();
+      return solution;
+    } else {
+      const [solution] = await db
+        .insert(userSolutions)
+        .values({
+          userId,
+          problemId,
+          solved,
+          attempts: 1
+        })
+        .returning();
+      return solution;
+    }
+  }
+
   async getLeaderboard(): Promise<User[]> {
-    return Array.from(this.users.values())
-      .sort((a, b) => b.points - a.points)
-      .slice(0, 10);
+    return await db
+      .select()
+      .from(users)
+      .orderBy(users.points)
+      .limit(10);
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
