@@ -77,12 +77,11 @@ export function registerRoutes(app: Express): Server {
 
     await storage.saveUserSolution(req.user!.id, problemId, isCorrect);
 
-    if (isCorrect) {
-      const existingSolution = await storage.getUserSolution(req.user!.id, problemId);
-      if (!existingSolution?.solved) {
-        const updatedUser = await storage.updateUserPoints(req.user!.id, problem.points);
-        return res.json({ correct: true, user: updatedUser });
-      }
+    const existingSolution = await storage.getUserSolution(req.user!.id, problemId);
+    
+    if (isCorrect && (!existingSolution?.solved && (!existingSolution || existingSolution.attempts <= 5))) {
+      const updatedUser = await storage.updateUserPoints(req.user!.id, problem.points);
+      return res.json({ correct: true, user: updatedUser });
     }
 
     res.json({ correct: isCorrect });
