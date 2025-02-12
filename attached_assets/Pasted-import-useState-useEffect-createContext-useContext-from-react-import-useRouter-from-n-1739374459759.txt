@@ -1,0 +1,168 @@
+import { useState, useEffect, createContext, useContext } from 'react';
+import { useRouter } from 'next/router';
+import { ChartBarIcon, AcademicCapIcon, LightBulbIcon, UserIcon } from '@heroicons/react/24/outline';
+
+interface Problem {
+  id: number;
+  title: string;
+  difficulty: 'Easy' | 'Medium' | 'Hard';
+  points: number;
+  solved: boolean;
+  description: string;
+  solution?: string;
+}
+
+interface User {
+  name: string;
+  email: string;
+  points: number;
+  solved: number;
+  rank: number;
+}
+
+interface AuthContextType {
+  user: User | null;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => void;
+  register: (user: Omit<User, 'points' | 'solved' | 'rank'> & { password: string }) => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType>({} as AuthContextType);
+
+const useAuth = () => useContext(AuthContext);
+
+const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) setUser(JSON.parse(storedUser));
+  }, []);
+
+  const login = async (email: string, password: string) => {
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const foundUser = users.find((u: any) => u.email === email && u.password === password);
+    if (!foundUser) throw new Error('Invalid credentials');
+    setUser(foundUser);
+    localStorage.setItem('user', JSON.stringify(foundUser));
+  };
+
+  const logout = () => {
+    setUser(null);
+    localStorage.removeItem('user');
+    router.push('/');
+  };
+
+  const register = async (newUser: any) => {
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    if (users.some((u: any) => u.email === newUser.email)) {
+      throw new Error('User already exists');
+    }
+    const userData = { ...newUser, points: 0, solved: 0, rank: users.length + 1 };
+    localStorage.setItem('users', JSON.stringify([...users, userData]));
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, login, logout, register }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+const Home = () => {
+  const { user, login, logout, register } = useAuth();
+  const router = useRouter();
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+  const [selectedProblem, setSelectedProblem] = useState<Problem | null>(null);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  // Mock data initialization
+  const [problems, setProblems] = useState<Problem[]>(() => {
+    if (typeof window !== 'undefined') {
+      const storedProblems = localStorage.getItem('problems');
+      return storedProblems ? JSON.parse(storedProblems) : [
+        // Initial problems array...
+      ];
+    }
+    return [];
+  });
+
+  const [leaderboard, setLeaderboard] = useState<User[]>(() => {
+    if (typeof window !== 'undefined') {
+      const storedLeaderboard = localStorage.getItem('leaderboard');
+      return storedLeaderboard ? JSON.parse(storedLeaderboard) : [
+        // Initial leaderboard array...
+      ];
+    }
+    return [];
+  });
+
+  const handleProblemClick = (problem: Problem) => {
+    setSelectedProblem(problem);
+  };
+
+  const handleSolveProblem = (problemId: number) => {
+    setProblems(prev => prev.map(p => 
+      p.id === problemId ? { ...p, solved: true } : p
+    ));
+    // Update user stats
+    if (user && selectedProblem && !selectedProblem.solved) {
+      const updatedUser = {
+        ...user,
+        points: user.points + selectedProblem.points,
+        solved: user.solved + 1
+      };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      // Update leaderboard
+      setLeaderboard(prev => 
+        prev.map(u => u.email === user.email ? updatedUser : u)
+          .sort((a, b) => b.points - a.points)
+          .map((u, i) => ({ ...u, rank: i + 1 }))
+      );
+    }
+    setSelectedProblem(null);
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget as HTMLFormElement);
+    try {
+      await login(formData.get('email') as string, formData.get('password') as string);
+      setIsLoginModalOpen(false);
+    } catch (error) {
+      setFormErrors({ login: error.message });
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget as HTMLFormElement);
+    if (formData.get('password') !== formData.get('confirmPassword')) {
+      setFormErrors({ register: 'Passwords do not match' });
+      return;
+    }
+    try {
+      await register({
+        name: formData.get('username') as string,
+        email: formData.get('email') as string,
+        password: formData.get('password') as string
+      });
+      setIsRegisterModalOpen(false);
+    } catch (error) {
+      setFormErrors({ register: error.message });
+    }
+  };
+
+  // Return JSX with all components...
+};
+
+// Wrap your app with AuthProvider in _app.tsx
+export default function App() {
+  return (
+    <AuthProvider>
+      <Home />
+    </AuthProvider>
+  );
+}
