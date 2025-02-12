@@ -1,8 +1,8 @@
 import { Problem, CircuitData } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
-import ReactFlow, { Controls, Background } from 'reactflow';
+import ReactFlow, { Controls, Background, Node, Edge } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,8 +14,27 @@ export function CircuitCanvas({ problem }: { problem: Problem }) {
   const { toast } = useToast();
   const [answer, setAnswer] = useState("");
   const circuitData = problem.circuitData as CircuitData;
-  const nodes = circuitData.nodes;
-  const edges = circuitData.edges;
+
+  // Transform circuit data into ReactFlow format
+  const nodes: Node[] = useMemo(() => 
+    circuitData.nodes.map((node) => ({
+      id: node.id,
+      type: 'default',
+      data: { label: `${node.type} (${node.value})` },
+      position: { x: Math.random() * 500, y: Math.random() * 300 } // Random positions for now
+    })),
+    [circuitData.nodes]
+  );
+
+  const edges: Edge[] = useMemo(() => 
+    circuitData.edges.map((edge, index) => ({
+      id: `e${index}`,
+      source: edge.source,
+      target: edge.target,
+      type: 'default'
+    })),
+    [circuitData.edges]
+  );
 
   const submitMutation = useMutation({
     mutationFn: async (solution: number) => {
