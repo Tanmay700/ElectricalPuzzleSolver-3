@@ -16,6 +16,7 @@ const problemSchema = z.object({
   description: z.string().min(1, "Description is required"),
   difficulty: z.enum(["Easy", "Medium", "Hard"]),
   points: z.number().min(1, "Points must be at least 1"),
+  image: z.instanceof(FileList).optional(),
   circuitData: z.object({
     nodes: z.array(z.object({
       id: z.string(),
@@ -28,7 +29,7 @@ const problemSchema = z.object({
     }))
   }),
   solution: z.object({
-    timeConstant: z.number()
+    timeConstant: z.number().min(0, "Time constant must be positive")
   })
 });
 
@@ -60,7 +61,33 @@ export function ProblemForm() {
 
   const createProblem = useMutation({
     mutationFn: async (data: ProblemFormData) => {
-      const res = await apiRequest("POST", "/api/problems", data);
+      const formData = new FormData();
+
+      // Append image if it exists
+      if (data.image?.[0]) {
+        formData.append('image', data.image[0]);
+      }
+
+      // Append other data as JSON
+      formData.append('data', JSON.stringify({
+        title: data.title,
+        description: data.description,
+        difficulty: data.difficulty,
+        points: data.points,
+        circuitData: data.circuitData,
+        solution: data.solution
+      }));
+
+      const res = await fetch('/api/problems', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      });
+
+      if (!res.ok) {
+        throw new Error(await res.text());
+      }
+
       return res.json();
     },
     onSuccess: (problem: Problem) => {
@@ -115,6 +142,24 @@ export function ProblemForm() {
 
         <FormField
           control={form.control}
+          name="image"
+          render={({ field: { onChange, value, ...field } }) => (
+            <FormItem>
+              <FormLabel>Circuit Image</FormLabel>
+              <FormControl>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => onChange(e.target.files)}
+                  {...field}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
           name="difficulty"
           render={({ field }) => (
             <FormItem>
@@ -145,6 +190,25 @@ export function ProblemForm() {
                 <Input 
                   type="number" 
                   min="1"
+                  {...field}
+                  onChange={(e) => field.onChange(Number(e.target.value))}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="solution.timeConstant"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Time Constant (seconds)</FormLabel>
+              <FormControl>
+                <Input 
+                  type="number" 
+                  step="0.001"
+                  min="0"
                   {...field}
                   onChange={(e) => field.onChange(Number(e.target.value))}
                 />

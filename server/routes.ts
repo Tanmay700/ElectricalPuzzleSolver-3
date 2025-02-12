@@ -3,15 +3,52 @@ import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { problems } from "@shared/schema";
+import multer from "multer";
+import path from "path";
+import express from "express";
+
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: 'uploads/',
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      cb(null, uniqueSuffix + path.extname(file.originalname));
+    }
+  }),
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type'));
+    }
+  }
+});
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
+  // Create uploads directory if it doesn't exist
+  app.use('/uploads', express.static('uploads'));
+
   // Create new problem
-  app.post("/api/problems", async (req, res) => {
+  app.post("/api/problems", upload.single('image'), async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    const problem = await storage.createProblem(req.body);
-    res.status(201).json(problem);
+
+    try {
+      const problemData = JSON.parse(req.body.data);
+      const imageUrl = req.file ? `/uploads/${req.file.filename}` : undefined;
+
+      const problem = await storage.createProblem({
+        ...problemData,
+        imageUrl
+      });
+
+      res.status(201).json(problem);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
   });
 
   // Get all problems

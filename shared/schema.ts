@@ -33,6 +33,7 @@ export const problems = pgTable("problems", {
   description: text("description").notNull(),
   difficulty: text("difficulty", { enum: ["Easy", "Medium", "Hard"] }).notNull(),
   points: integer("points").notNull(),
+  imageUrl: text("image_url"),
   circuitData: jsonb("circuit_data").notNull(),
   solution: jsonb("solution").notNull()
 });

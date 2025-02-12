@@ -71,6 +71,19 @@ export function CircuitCanvas({ problem }: { problem: Problem }) {
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground mb-4">{problem.description}</p>
+
+          {/* Circuit Image */}
+          {problem.imageUrl && (
+            <div className="mb-4">
+              <img 
+                src={problem.imageUrl} 
+                alt="Circuit diagram"
+                className="max-w-full h-auto rounded-lg border"
+              />
+            </div>
+          )}
+
+          {/* Interactive Circuit */}
           <div className="h-[400px] border rounded-md">
             <ReactFlow
               nodes={nodes}
